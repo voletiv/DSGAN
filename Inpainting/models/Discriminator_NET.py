@@ -9,8 +9,8 @@ import functools
 # Multi-Scale Discriminator
 ##############################################################################
 class MultiscaleDiscriminator(nn.Module):
-    def __init__(self, input_nc, ndf=64, n_layers=3, norm_layer='instance',
-                 use_sigmoid=False, num_D=2, getIntermFeat=True):
+    def __init__(self, input_nc, ndf=64, n_layers=3,
+                    norm_layer='instance', use_sigmoid=False, num_D=2, getIntermFeat=True):
         super(MultiscaleDiscriminator, self).__init__()
         self.num_D = num_D
         self.n_layers = n_layers

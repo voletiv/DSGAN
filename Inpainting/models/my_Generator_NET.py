@@ -19,12 +19,16 @@ def get_norm_layer1d(norm_type='instance'):
 
 
 class Generator(nn.Module):
-    def __init__(self, cond_mode='obj_rel_obj', cond_dim=128, z_dim=128, output_imsize=64,
-                 ngf=64, n_upsampling=3, n_blocks=9, norm_layer='instance',
+    def __init__(self, cond_mode='obj_rel_obj', cond_dim=128, z_dim=128, ngf=64, 
+                 n_upsampling=3, n_blocks=9, norm_layer='instance', output_imsize=64,
                  padding_type='reflect', use_skip=False, use_mask=False, extra_embed=False,
-                 obj_vocab_len=36, rel_vocab_len=4, output_nc=3):
+                 obj_vocab_len=36, rel_vocab_len=4, output_nc=1):
+
+        assert cond_mode in ['obj', 'obj_obj', 'obj_rel_obj']
         assert(n_blocks >= 0)
+
         super(Generator, self).__init__()
+
         self.cond_mode = cond_mode
         self.cond_dim = cond_dim
         self.z_dim = z_dim
@@ -142,14 +146,14 @@ class Generator(nn.Module):
         output = self.output_layer(dec_feat)
         return output
 
-    def forward(self, cond, noise, mask):
+    def forward(self, cond, noise, mask=None):
         # ctx_feat, ctx_feats = self.forward_encoder(self.ctx_inputEmbedder, self.ctx_downsampler, img, self.use_skip)
         if self.cond_mode == 'obj_rel_obj':
-            obj1, rel, obj2 = cond
+            obj1, rel, obj2 = cond[:, 0], cond[:, 1], cond[:, 2]
             obj1_emb, rel_emb, obj2_emb = self.obj_embedder(obj1), self.rel_embedder(rel), self.obj_embedder(obj2)
             cond_emb = torch.cat([obj1_emb, rel_emb, obj2_emb], dim=1)
         elif self.cond_mode == 'obj_obj':
-            obj1, obj2 = cond
+            obj1, obj2 = cond[:, 0], cond[:, 1]
             obj1_emb, obj2_emb = self.obj_embedder(obj1), self.obj_embedder(obj2)
             cond_emb = torch.cat([obj1_emb, obj2_emb], dim=1)
         elif self.cond_mode == 'obj':
