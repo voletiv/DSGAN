@@ -60,8 +60,8 @@ def plot_losses(save_path, iters, g_losses, g_loss_labels, d_losses, d_loss_labe
 
 parser = argparse.ArgumentParser()
 # Dataset
-parser.add_argument('--cond_mode', type=str, choices=['obj', 'obj_obj', 'obj_rel_obj'], help='structure of condition')
 parser.add_argument('--save_path', type=str, default='.', help='location to save path')
+parser.add_argument('--cond_mode', type=str, choices=['obj', 'obj_obj', 'obj_rel_obj'], help='structure of condition')
 parser.add_argument('--num_objects', type=int, default=5)
 parser.add_argument('--pairings_per_obj', type=int, default=0)
 parser.add_argument('--num_repeats', type=int, default=10)
@@ -84,7 +84,7 @@ parser.add_argument('--num_D', type=int, default=2, help='number of discriminato
 parser.add_argument('--lr', type=float, default=0.0002, help='adam: learning rate')
 parser.add_argument('--b1', type=float, default=0.5, help='adam: decay of first order momentum of gradient')
 parser.add_argument('--b2', type=float, default=0.999, help='adam: decay of first order momentum of gradient')
-parser.add_argument('--n_cpu', type=int, default=4, help='number of cpu threads to use during batch generation')
+parser.add_argument('--n_cpu', type=int, default=8, help='number of cpu threads to use during batch generation')
 # Image
 parser.add_argument('--img_size', type=int, default=64, help='size of each image dimension')
 parser.add_argument('--img_nc', type=int, default=1, help='# of channels in image')
@@ -245,7 +245,7 @@ fixed_noise = fixed_noise.to(device)
 
 
 # Log file
-log_file_name = os.path.join(exp_name, 'log.txt')
+log_file_name = os.path.join(opt.save_path, exp_name, 'log.txt')
 log_file = open(log_file_name, "wt")
 
 # -----------------
@@ -275,13 +275,13 @@ try:
                 print("\n\nBatch", batch)
                 subprocess.run('nvidia-smi')
 
+            # double the batches
+            imgs = torch.cat((imgs, imgs), dim=0)
+            conds = torch.cat((conds, conds), dim=0)
+
             # Configure input
             imgs = imgs.to(device)
             conds = conds.to(device)
-
-            # double the batches
-            imgs = torch.cat((imgs, imgs),dim=0)
-            conds = torch.cat((conds, conds), dim=0)
 
             # sample noises
             B = int(imgs.size(0)/2)
@@ -294,7 +294,6 @@ try:
             #  Train Discriminator
             # ---------------------
             optimizer_D.zero_grad()
-            optimizer_G.zero_grad()
 
             # Measure discriminator's ability to classify real from generated samples
             pred_real = discriminator(imgs)
@@ -309,7 +308,6 @@ try:
             # -----------------
             #  Train Generator
             # -----------------
-            optimizer_D.zero_grad()
             optimizer_G.zero_grad()
 
             # Adversarial loss

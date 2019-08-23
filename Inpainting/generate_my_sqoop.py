@@ -1,9 +1,6 @@
-import argparse
-import collections
-import h5py
+# import argparse
+# import h5py
 import io
-import json
-import logging
 import math
 import numpy as np
 import os
@@ -16,7 +13,6 @@ import tqdm
 from functools import partial
 from PIL import Image, ImageDraw, ImageFont
 
-logger = logging.getLogger(__name__)
 RELATIONS = ['left_of', 'right_of', 'above', 'below']
 COLORS = ['red', 'green', 'blue', 'yellow', 'cyan', 'purple', 'brown', 'gray']
 SHAPES = list(string.ascii_uppercase) + ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
