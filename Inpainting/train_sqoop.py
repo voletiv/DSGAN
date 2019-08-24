@@ -67,11 +67,11 @@ parser.add_argument('--pairings_per_obj', type=int, default=0)
 parser.add_argument('--num_repeats', type=int, default=10)
 parser.add_argument('--val', action='store_true')
 parser.add_argument('--num_repeats_eval', type=int, default=10)
+parser.add_argument('--name', type=str, default='SQOOP', help='name of the experiment')
 # Training
-parser.add_argument('--n_epochs', type=int, default=200, help='number of epochs of training')
+parser.add_argument('--n_epochs', type=int, default=20000, help='number of epochs of training')
 parser.add_argument('--batch_size', type=int, default=4, help='size of the batches')
 parser.add_argument('--gpu_id', type=int, default=0, help='gpu_id')
-parser.add_argument('--name', type=str, default='SQOOP', help='name of the experiment')
 # Model
 # parser.add_argument('--crop_mode', type=str, default='trans_ctr', help='[random | trans_ctr]')
 parser.add_argument('--cond_dim', type=int, default=128, help='dimmension for each element in condition')
@@ -107,18 +107,18 @@ cuda = torch.cuda.is_available()
 device = 'cuda:' + str(opt.gpu_id) if cuda else 'cpu'
 
 # visualization
-exp_name = '{:%Y%m%d_%H%M%S}_{}_SQOOP_objs{}perObj{}reps{}_cond{}_z{}_ngf{}_G{}numG{}_D{}numD{}_lr{:.4f}_featW{:.3f}_noiseW{:.3f}_{}'.format(datetime.datetime.now(),
+opt.exp_name = '{:%Y%m%d_%H%M%S}_{}_SQOOP_objs{}perObj{}reps{}_cond{}_z{}_ngf{}_G{}numG{}_D{}numD{}_lr{:.4f}_featW{:.3f}_noiseW{:.3f}_{}_bs{}'.format(datetime.datetime.now(),
     opt.cond_mode, opt.num_objects, opt.pairings_per_obj, opt.num_repeats, opt.cond_dim, opt.noise_dim, opt.ngf,
-    opt.n_layers_G, opt.n_blocks_G, opt.n_layers_D, opt.num_D, opt.lr, opt.feat_w, opt.noise_w, opt.dist_measure)
-exp_name += '_' + opt.name
+    opt.n_layers_G, opt.n_blocks_G, opt.n_layers_D, opt.num_D, opt.lr, opt.feat_w, opt.noise_w, opt.dist_measure, opt.batch_size)
+opt.exp_name += '_' + opt.name
 
 # if not opt.crop_mode == 'random':
 #     exp_name += '_' + opt.crop_mode
-checkpoint_dir = os.path.join(opt.save_path, exp_name, 'weights')
+checkpoint_dir = os.path.join(opt.save_path, opt.exp_name, 'weights')
 if not os.path.exists(checkpoint_dir):
     os.makedirs(checkpoint_dir)
 
-samples_dir = os.path.join(opt.save_path, exp_name, 'samples')
+samples_dir = os.path.join(opt.save_path, opt.exp_name, 'samples')
 os.makedirs(samples_dir)
 
 # writer = SummaryWriter(log_dir=checkpoint_dir)
@@ -174,7 +174,7 @@ else:
     train_imgs, train_qs, train_qs_oh, _ = data
 
 # ims : consider only green channel, and make it BxCxWxH
-train_imgs = torch.from_numpy(np.array(train_imgs)[:, :, :, 1, np.newaxis]).permute(0, 3, 1, 2).float().div(128.)
+train_imgs = torch.from_numpy(np.array(train_imgs)[:, :, :, 1, np.newaxis]).permute(0, 3, 1, 2).float().div(256.).mul(2.).sub(1.)
 # cond : in the format obj_rel_obj
 train_cond = torch.from_numpy(np.array(train_qs_oh))
 
@@ -245,8 +245,10 @@ fixed_noise = fixed_noise.to(device)
 
 
 # Log file
-log_file_name = os.path.join(opt.save_path, exp_name, 'log.txt')
+log_file_name = os.path.join(opt.save_path, opt.exp_name, 'log.txt')
 log_file = open(log_file_name, "wt")
+log_file.write(str(opt) + "\n")
+log_file.flush()
 
 # -----------------
 #  Run Training
@@ -271,7 +273,7 @@ try:
 
             # print("Epoch", epoch, "; batch", batch, "of", len(train_dataloader)-1)
             # mem_check()
-            if batch < 22:
+            if epoch == 0 and batch < 22:
                 print("\n\nBatch", batch)
                 subprocess.run('nvidia-smi')
 
@@ -373,12 +375,13 @@ try:
                         d_losses[-1], d_real_losses[-1], d_fake_losses[-1], g_losses[-1], g_adv_losses[-1], g_feat_losses[-1], g_noise_losses[-1])
                         # d_xs[-1], d_gz_ds[-1], d_gz_gs[-1])
                 log += "\n"
+                print(opt.exp_name)
                 print(log)
                 log_file.write(log)
                 log_file.flush()
 
                 # plot_losses(ckpts, d_losses, g_losses, g_adv_losses, g_feat_losses, g_noise_losses, d_xs, d_gz_ds, d_gz_gs)
-                plot_losses(os.path.join(opt.save_path, exp_name), ckpts,
+                plot_losses(os.path.join(opt.save_path, opt.exp_name), ckpts,
                             [g_losses, g_adv_losses, g_feat_losses, g_noise_losses], ["G_loss", "G_loss_adv", "G_loss_feat", "G_loss_noise"],
                             [d_losses, d_real_losses, d_fake_losses], ["D_loss", "D_loss_real", "D_loss_fake"])
 
@@ -389,7 +392,7 @@ try:
                 generator.train()
 
                 # record for visualization
-                gen_imgs = gen_imgs.detach().cpu().clamp_(0, 1)
+                gen_imgs = gen_imgs.detach().cpu().add(1.).div(2.).clamp_(0, 1)
                 gen_imgs = torch.cat([torch.zeros(gen_imgs.shape), gen_imgs, torch.zeros(gen_imgs.shape)], dim=1)
                 # Add text of condition to image
                 sample_images_bhwc = gen_imgs.permute(0, 2, 3, 1).numpy()

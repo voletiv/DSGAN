@@ -226,7 +226,7 @@ def generate_scene_and_question(pair, sampler, rng, label, rel, num_objects, voc
     return scene, question, q_oh
 
 
-def gen_image_and_condition(obj_pairs, sampler, seed, num_objects, vocab):
+def gen_image_and_condition(obj_pairs, sampler, seed, num_objects, vocab, image_size=64):
     presampled_relations = sampler.sample_relation(num=len(obj_pairs))      # pre-sample relations
 
     rng = np.random.RandomState(seed)
@@ -241,7 +241,7 @@ def gen_image_and_condition(obj_pairs, sampler, seed, num_objects, vocab):
         labels.append(label)
         scene, question, q_oh = generate_scene_and_question(obj_pairs[i], sampler, rng, label, presampled_relations[i], num_objects, vocab)
         # buffer_ = io.BytesIO()
-        image = np.array(draw_scene(scene[:num_objects]))
+        image = np.array(draw_scene(scene[:num_objects], image_size=image_size))
         # image.save(buffer_, format='png')
         # buffer_.seek(0)
         # image = np.frombuffer(buffer_.read(), dtype='uint8')
@@ -253,7 +253,7 @@ def gen_image_and_condition(obj_pairs, sampler, seed, num_objects, vocab):
 
 
 def gen_my_sqoop(vocab=None, num_objects=5, pairings_per_obj=0, num_repeats=10,
-                    val=False, test=False, num_repeats_eval=10):
+                    image_size=64, val=False, test=False, num_repeats_eval=10):
 
     if vocab is None:
         vocab = SHAPES
@@ -281,7 +281,7 @@ def gen_my_sqoop(vocab=None, num_objects=5, pairings_per_obj=0, num_repeats=10,
             train_pairs += [(x,y)]*num_repeats
 
     print("Generating train images & qs")
-    train_ims, train_qs, train_qs_oh, train_labels = gen_image_and_condition(train_pairs, train_sampler, 1, num_objects, vocab)
+    train_ims, train_qs, train_qs_oh, train_labels = gen_image_and_condition(train_pairs, train_sampler, 1, num_objects, vocab, image_size=image_size)
 
     if val or test:
         remaining = list(chosen)
